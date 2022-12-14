@@ -15,7 +15,7 @@ version = "0.3.1"
 [dependencies]
 bme680 = {version = "0.5.1", optional = true}
 embedded-hal = {version = "0.2.5", optional = true}
-libalgobsec-sys = "0.1.0"
+libalgobsec-sys = {git="https://github.com/patcher-ms/libalgobsec-sys.git", branch="patch-1" }
 nb = "1.0.0"
 
 [dev-dependencies]
