@@ -310,10 +310,14 @@ impl<S: BmeSensor, C: Clock, B: Borrow<C>> Bsec<S, C, B> {
     /// [`Self::process_last_measurement`] after the duration has passed.
     pub fn start_next_measurement(&mut self) -> nb::Result<Duration, Error<S::Error>> {
         let mut bme_settings = bsec_bme_settings_t {
+            op_mode: 0,
             next_call: 0,
             process_data: 0,
             heater_temperature: 0,
-            heating_duration: 0,
+            heater_duration: 0,
+            heater_profile_len: 0,
+            heater_temperature_profile: [0; 10],
+            heater_duration_profile: [0; 10],
             run_gas: 0,
             pressure_oversampling: 0,
             temperature_oversampling: 0,
@@ -634,7 +638,7 @@ impl From<SampleRate> for f64 {
         match sample_rate {
             Disabled => BSEC_SAMPLE_RATE_DISABLED,
             Ulp => BSEC_SAMPLE_RATE_ULP,
-            Continuous => BSEC_SAMPLE_RATE_CONTINUOUS,
+            Continuous => BSEC_SAMPLE_RATE_CONT,
             Lp => BSEC_SAMPLE_RATE_LP,
             UlpMeasurementOnDemand => BSEC_SAMPLE_RATE_ULP_MEASUREMENT_ON_DEMAND,
         }
@@ -722,8 +726,12 @@ pub enum OutputKind {
     RunInStatus = 0x0200,
     SensorHeatCompensatedTemperature = 0x0400,
     SensorHeatCompensatedHumidity = 0x0800,
-    DebugCompensatedGas = 0x1000,
     GasPercentage = 0x2000,
+    GasEstimate1,
+    GasEstimate2,
+    GasEstimate3,
+    GasEstimate4,
+    RawGasIndex,
 }
 
 impl From<OutputKind> for bsec_virtual_sensor_t {
@@ -747,8 +755,12 @@ impl From<OutputKind> for bsec_virtual_sensor_t {
             SensorHeatCompensatedHumidity => {
                 bsec_virtual_sensor_t_BSEC_OUTPUT_SENSOR_HEAT_COMPENSATED_HUMIDITY
             }
-            DebugCompensatedGas => bsec_virtual_sensor_t_BSEC_OUTPUT_COMPENSATED_GAS,
             GasPercentage => bsec_virtual_sensor_t_BSEC_OUTPUT_GAS_PERCENTAGE,
+            GasEstimate1 => bsec_virtual_sensor_t_BSEC_OUTPUT_GAS_ESTIMATE_1,
+            GasEstimate2 => bsec_virtual_sensor_t_BSEC_OUTPUT_GAS_ESTIMATE_2,
+            GasEstimate3 => bsec_virtual_sensor_t_BSEC_OUTPUT_GAS_ESTIMATE_3,
+            GasEstimate4 => bsec_virtual_sensor_t_BSEC_OUTPUT_GAS_ESTIMATE_4,
+            RawGasIndex => bsec_virtual_sensor_t_BSEC_OUTPUT_RAW_GAS_INDEX,
         }
     }
 }
@@ -776,8 +788,12 @@ impl TryFrom<bsec_virtual_sensor_t> for OutputKind {
             bsec_virtual_sensor_t_BSEC_OUTPUT_SENSOR_HEAT_COMPENSATED_HUMIDITY => {
                 Ok(SensorHeatCompensatedHumidity)
             }
-            bsec_virtual_sensor_t_BSEC_OUTPUT_COMPENSATED_GAS => Ok(DebugCompensatedGas),
             bsec_virtual_sensor_t_BSEC_OUTPUT_GAS_PERCENTAGE => Ok(GasPercentage),
+            bsec_virtual_sensor_t_BSEC_OUTPUT_GAS_ESTIMATE_1 => Ok(GasEstimate1),
+            bsec_virtual_sensor_t_BSEC_OUTPUT_GAS_ESTIMATE_2 => Ok(GasEstimate2),
+            bsec_virtual_sensor_t_BSEC_OUTPUT_GAS_ESTIMATE_3 => Ok(GasEstimate3),
+            bsec_virtual_sensor_t_BSEC_OUTPUT_GAS_ESTIMATE_4 => Ok(GasEstimate4),
+            bsec_virtual_sensor_t_BSEC_OUTPUT_RAW_GAS_INDEX => Ok(RawGasIndex),
             _ => Err(ConversionError::InvalidVirtualSensorId(virtual_sensor)),
         }
     }
